@@ -93,16 +93,6 @@
     <input type="hidden" id="activeId">
     <input type="text" id="userName" placeholder="First and Last Name" required>
     <input type="tel" id="userPhone" placeholder="(###) ###-####" maxlength="14" required>
-    <select id="userProvider" required>
-        <option value="">Select Carrier</option>
-        <option value="AT&T">AT&T</option>
-        <option value="T-Mobile">T-Mobile</option>
-        <option value="Verizon">Verizon</option>
-        <option value="Sprint">Sprint</option>
-        <option value="Xfinity Mobile">Xfinity Mobile</option>
-        <option value="Mint Mobile">Mint Mobile</option>
-        <option value="Google Fi">Google Fi</option>
-    </select>
     <div style="margin-top:15px; display: flex; gap: 10px;">
         <button class="btn" style="background:#f1f5f9; flex: 1;" onclick="closeModal()">Cancel</button>
         <button class="btn btn-claim" id="confirmClaimBtn" style="flex: 2;" onclick="submitClaim()">
@@ -113,7 +103,7 @@
 </div>
 
 <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycby1U4WuVfsAcWK-3qcFsZwMsZIRw_mxAR7TGilLtN1oIhp65qElFHD4Lj6dOhwozZ2M/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbyDt8fvW7hZ-5rlORLTX9S73uO3_WP1dJD8OdmgAXee9l5BJsBTTPj3V_kbaG8kjc5fcQ/exec";
     const API_KEY = ""; 
     const DATA_SHEET = "Grounds";
     
@@ -224,14 +214,13 @@
         const id = document.getElementById('activeId').value;
         const name = document.getElementById('userName').value.trim();
         const phone = document.getElementById('userPhone').value.replace(/\D/g, '');
-        const provider = document.getElementById('userProvider').value;
         const btn = document.getElementById('confirmClaimBtn');
-        if(!name || phone.length < 10 || !provider) return alert("Fill all fields.");
+        if(!name || phone.length < 10 ) return alert("Fill all fields.");
 
         btn.classList.add('loading');
         btn.disabled = true;
         try {
-            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ method: 'PUT', key: API_KEY, sheet: DATA_SHEET, id: id, payload: { Name: name, Phone: phone, Provider: provider } }) });
+            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ method: 'PUT', key: API_KEY, sheet: DATA_SHEET, id: id, payload: { Name: name, Phone: phone } }) });
             closeModal();
             loadSignups();
         } catch (e) { 
@@ -246,7 +235,7 @@
         btn.classList.add('loading');
         btn.disabled = true;
         try {
-            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ method: 'PUT', key: API_KEY, sheet: DATA_SHEET, id: id, payload: { Name: "", Phone: "", Provider: "" } }) });
+            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ method: 'PUT', key: API_KEY, sheet: DATA_SHEET, id: id, payload: { Name: "", Phone: "" } }) });
             loadSignups();
         } catch (e) { 
             btn.classList.remove('loading'); 
