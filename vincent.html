@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vincent Signups</title>
+    <style>
+        /* Styles remain the same to preserve your layout */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #333; margin: 10px; line-height: 1.3; font-size: 14px; }
+        .summary-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 10px; background: #f0f4f8; border-radius: 6px; border: 1px solid #d1d9e6; flex-wrap: wrap; gap: 8px; }
+        .signup-header { display: flex; font-weight: bold; padding: 8px 12px; background: #e2e8f0; border-radius: 6px 6px 0 0; border-bottom: 2px solid #cbd5e0; }
+        .signup-row { display: flex; align-items: center; padding: 6px 12px; border-bottom: 1px solid #edf2f7; transition: background 0.2s; }
+        .signup-row:nth-child(even) { background-color: #f8fafc; }
+        .signup-row:hover { background-color: #f1f5f9; }
+        .col-date { width: 110px; flex-shrink: 0; }
+        .col-time { width: 180px; flex-shrink: 0; font-weight: 500; }
+        .col-ward { width: 120px; flex-shrink: 0; }
+        .col-slot { width: 50px; flex-shrink: 0; text-align: center; }
+        .col-name { flex-grow: 1; padding: 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .col-action { width: 100px; text-align: right; flex-shrink: 0; }
+        .header-time { font-weight: 900 !important; }
+        .btn { padding: 4px 12px; cursor: pointer; border-radius: 4px; border: none; font-size: 13px; font-weight: 500; transition: 0.2s; position: relative; min-width: 70px; }
+        .btn-claim { background: #16a34a; color: white; }
+        .btn-claim:hover { background: #15803d; }
+        .btn-clear { background: #dc2626; color: white; }
+        .btn-clear:hover { background: #b91c1c; }
+        .spinner { display: none; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 0.8s linear infinite; position: absolute; left: 50%; top: 50%; margin-left: -6px; margin-top: -6px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading .spinner { display: block; }
+        .loading .btn-text { visibility: hidden; }
+        .filter-select { padding: 4px; border-radius: 4px; border: 1px solid #cbd5e0; font-size: 13px; background: white; }
+        .filter-group { display: flex; align-items: center; gap: 15px; }
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius: 12px; z-index: 100; width: 300px; border: 1px solid #e2e8f0; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); z-index: 50; }
+        input, .modal select { width: 100%; padding: 8px; margin: 8px 0; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; box-sizing: border-box; }
+        @media (max-width: 768px) { .col-ward, .col-slot { display: none; } .col-time { width: 150px; } }
+    </style>
+</head>
+<body>
+
+<div class="summary-header">
+    <div id="slot-counter" style="font-weight: bold;">Connecting...</div>
+    <div class="filter-group">
+        <div>
+            <input type="checkbox" id="unclaimed-only" onchange="renderSlots()" style="width: auto; margin: 0; vertical-align: middle;">
+            <label for="unclaimed-only" style="font-size: 13px; cursor: pointer;">Show Only Open Spots</label>
+        </div>
+        <div>
+            <select id="ward-filter" class="filter-select" onchange="handleFilterChange()">
+                <option value="">All Wards</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="signup-header">
+    <div class="col-date">Day & Date</div>
+    <div class="col-time header-time">Time (Mountain)</div>
+    <div class="col-ward">Ward</div>
+    <div class="col-slot">Slot</div>
+    <div class="col-name">Claimed By</div>
+    <div class="col-action"></div>
+</div>
+
+<div id="signup-container">
+    <div style="padding: 20px; text-align: center; color: #64748b;">Loading assignments...</div>
+</div>
+
+<button id="view-more-btn" class="btn" style="display: none; width: 100%; margin-top: 10px; background: #475569; color: white; padding: 10px;" onclick="loadMore()">Load More</button>
+
+<div class="overlay" id="overlay" onclick="closeModal()"></div>
+<div class="modal" id="claimModal">
+    <h3 style="margin: 0 0 10px 0;">Claim Vincent Spot</h3>
+    <input type="hidden" id="activeId">
+    <input type="text" id="userName" placeholder="First and Last Name" required>
+    <input type="tel" id="userPhone" placeholder="(###) ###-####" maxlength="14" required>
+    <select id="userProvider" required>
+        <option value="">Select Carrier</option>
+        <option value="AT&T">AT&T</option>
+        <option value="T-Mobile">T-Mobile</option>
+        <option value="Verizon">Verizon</option>
+        <option value="Sprint">Sprint</option>
+        <option value="Xfinity Mobile">Xfinity Mobile</option>
+        <option value="Mint Mobile">Mint Mobile</option>
+        <option value="Google Fi">Google Fi</option>
+    </select>
+    <div style="margin-top:15px; display: flex; gap: 10px;">
+        <button class="btn" style="background:#f1f5f9; flex: 1;" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-claim" id="confirmClaimBtn" style="flex: 2;" onclick="submitClaim()">
+            <span class="btn-text">Confirm</span>
+            <div class="spinner"></div>
+        </button>
+    </div>
+</div>
+
+<script>
+    const API_URL = "https://script.google.com/macros/s/AKfycby1U4WuVfsAcWK-3qcFsZwMsZIRw_mxAR7TGilLtN1oIhp65qElFHD4Lj6dOhwozZ2M/exec";
+    const API_KEY = ""; 
+    const DATA_SHEET = "Vincent"; 
+    
+    let allData = [];
+    let displayedCount = 25;
+    let currentWardFilter = "";
+
+    // Helper to format ISO timestamps (1899-...) into readable times (4:30 PM)
+    function formatTime(val) {
+        if (!val || typeof val !== 'string' || !val.includes('T')) return val;
+        try {
+            const date = new Date(val);
+            if (isNaN(date.getTime())) return val;
+            return date.toLocaleTimeString('en-US', { 
+                hour: 'numeric', 
+                minute: '2-digit', 
+                hour12: true 
+            });
+        } catch (e) { return val; }
+    }
+
+    document.getElementById('userPhone').addEventListener('input', function (e) {
+        let x = e.target.value.replace(/\D/g, '').match(/(\d{0,3})(\d{0,3})(\d{0,4})/);
+        e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? '-' + x[3] : '');
+    });
+
+    async function loadSignups() {
+        try {
+            const response = await fetch(`${API_URL}?key=${API_KEY}&sheet=${DATA_SHEET}`);
+            const result = await response.json();
+            if (result.status !== 200) return;
+
+            const today = new Date();
+            today.setHours(0,0,0,0);
+
+            allData = result.data
+                .filter(row => {
+                    const rowDate = new Date(row.Date);
+                    return row.Date && !isNaN(rowDate.getTime()) && rowDate >= today;
+                })
+                .sort((a, b) => new Date(a.Date) - new Date(b.Date));
+
+            populateWardFilter();
+            renderSlots();
+        } catch (e) {
+            document.getElementById('signup-container').innerHTML = "Connection Error.";
+        }
+    }
+
+    function populateWardFilter() {
+        const filter = document.getElementById('ward-filter');
+        const wards = [...new Set(allData.map(row => (row.Ward || row.ward || "").trim()))].filter(w => w !== "").sort();
+        filter.innerHTML = '<option value="">All Wards</option>';
+        wards.forEach(ward => {
+            const opt = document.createElement('option');
+            opt.value = ward;
+            opt.textContent = ward;
+            filter.appendChild(opt);
+        });
+    }
+
+    function handleFilterChange() {
+        currentWardFilter = document.getElementById('ward-filter').value;
+        renderSlots();
+    }
+
+    function renderSlots() {
+        const container = document.getElementById('signup-container');
+        const showUnclaimedOnly = document.getElementById('unclaimed-only').checked;
+        container.innerHTML = '';
+        
+        let filteredData = allData;
+        if (currentWardFilter) {
+            filteredData = filteredData.filter(row => (row.Ward || row.ward || "").trim() === currentWardFilter);
+        }
+        if (showUnclaimedOnly) {
+            filteredData = filteredData.filter(row => !(row.Name || "").toString().trim());
+        }
+
+        const openCount = filteredData.filter(row => !(row.Name || "").toString().trim()).length;
+        document.getElementById('slot-counter').textContent = `Open Vincent Assignments: ${openCount}`;
+
+        const subset = filteredData.slice(0, displayedCount);
+        subset.forEach(row => {
+            const div = document.createElement('div');
+            div.className = 'signup-row';
+            const isClaimed = (row.Name || "").toString().trim() !== "";
+            const rowDate = new Date(row.Date);
+            rowDate.setHours(rowDate.getHours() + 5); 
+            
+            const dateStr = rowDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            
+            // Apply formatTime helper to clean up ISO strings
+            const startTime = formatTime(row['Start Time'] || row['StartTime'] || '---');
+            const endTime = formatTime(row['End Time'] || row['EndTime'] || '---');
+
+            div.innerHTML = `
+                <div class="col-date">${dateStr}</div>
+                <div class="col-time">${startTime} - ${endTime}</div>
+                <div class="col-ward">${row.Ward || '---'}</div>
+                <div class="col-slot">${row.Slot || '-'}</div>
+                <div class="col-name">${isClaimed ? `<strong>${row.Name}</strong>` : '<span style="color:#94a3b8; font-style:italic;">Available</span>'}</div>
+                <div class="col-action">
+                    ${isClaimed ? 
+                        `<button class="btn btn-clear" onclick="clearSpot(this, ${row._id})"><span class="btn-text">Clear</span><div class="spinner"></div></button>` : 
+                        `<button class="btn btn-claim" onclick="openModal(${row._id})">Claim</button>`
+                    }
+                </div>
+            `;
+            container.appendChild(div);
+        });
+
+        const moreBtn = document.getElementById('view-more-btn');
+        moreBtn.style.display = filteredData.length > displayedCount ? 'block' : 'none';
+    }
+
+    function loadMore() { displayedCount += 25; renderSlots(); }
+    function openModal(id) { document.getElementById('activeId').value = id; document.getElementById('claimModal').style.display = 'block'; document.getElementById('overlay').style.display = 'block'; }
+    function closeModal() { document.getElementById('claimModal').style.display = 'none'; document.getElementById('overlay').style.display = 'none'; }
+
+    async function submitClaim() {
+        const id = document.getElementById('activeId').value;
+        const name = document.getElementById('userName').value.trim();
+        const phone = document.getElementById('userPhone').value.replace(/\D/g, '');
+        const provider = document.getElementById('userProvider').value;
+        const btn = document.getElementById('confirmClaimBtn');
+        if(!name || phone.length < 10 || !provider) return alert("Fill all fields.");
+
+        btn.classList.add('loading');
+        btn.disabled = true;
+        try {
+            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ method: 'PUT', key: API_KEY, sheet: DATA_SHEET, id: id, payload: { Name: name, Phone: phone, Provider: provider } }) });
+            closeModal();
+            loadSignups();
+        } catch (e) { 
+            btn.classList.remove('loading'); 
+            btn.disabled = false;
+        }
+    }
+
+    async function clearSpot(btn, id) {
+        if (!confirm("Make available?")) return;
+        btn.classList.add('loading');
+        btn.disabled = true;
+        try {
+            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ method: 'PUT', key: API_KEY, sheet: DATA_SHEET, id: id, payload: { Name: "", Phone: "", Provider: "" } }) });
+            loadSignups();
+        } catch (e) { 
+            btn.classList.remove('loading'); 
+            btn.disabled = false;
+        }
+    }
+
+    loadSignups();
+</script>
+</body>
+</html>
